@@ -10,19 +10,6 @@ DEV_PASSWORD = os.environ.get('DEV_CLOUD_SQL_PASSWORD')
 DEV_DATABASE = os.environ.get('DEV_CLOUD_SQL_DATABASE_NAME')
 DEV_CONNECTION_NAME = os.environ.get('DEV_CLOUD_SQL_CONNECTION_NAME')
 
-PROD_USER = os.environ.get('PROD_CLOUD_SQL_USERNAME')
-PROD_PASSWORD = os.environ.get('PROD_CLOUD_SQL_PASSWORD')
-PROD_DATABASE = os.environ.get('PROD_CLOUD_SQL_DATABASE_NAME')
-PROD_CONNECTION_NAME = os.environ.get('PROD_CLOUD_SQL_CONNECTION_NAME')
-
-
-PROD_SQLALCHEMY_DATABASE_URI = (
-    'mysql+pymysql://{user}:{password}@localhost/{database}'
-    '?unix_socket=/cloudsql/{connection_name}').format(
-        user=PROD_USER, password=PROD_PASSWORD,
-        database=PROD_DATABASE, connection_name=PROD_CONNECTION_NAME)
-
-
 DEV_SQLALCHEMY_DATABASE_URI = (
     'mysql+pymysql://{user}:{password}@localhost/{database}'
     '?unix_socket=/cloudsql/{connection_name}').format(
@@ -31,16 +18,11 @@ DEV_SQLALCHEMY_DATABASE_URI = (
 
 
 if os.environ.get ('GAE_INSTANCE'):
-    print("PRODUCTION")
-    SQLALCHEMY_DATABASE_URI = PROD_SQLALCHEMY_DATABASE_URI
+    app.config['SQLALCHEMY_DATABASE_URI'] = DEV_SQLALCHEMY_DATABASE_URI
+    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = True
 else:
-    print("DEVELOPMENT")
-    SQLALCHEMY_DATABASE_URI = DEV_SQLALCHEMY_DATABASE_URI
-
-
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(SQLALCHEMY_DATABASE_URI,  "sqlite:///vaccinations.db")
-# app.config['SQLALCHEMY_DATABASE_URI'] = SQLALCHEMY_DATABASE_URI
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = True
+    app.config['SQLALCHEMY_DATABASE_URI'] = "sqlite:///vaccinations.db"
+    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app)
 
