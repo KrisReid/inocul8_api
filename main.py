@@ -5,18 +5,41 @@ import os
 
 app = Flask(__name__)
 
-USER = os.environ.get('CLOUD_SQL_USERNAME')
-PASSWORD = os.environ.get('CLOUD_SQL_PASSWORD')
-DATABASE = os.environ.get('CLOUD_SQL_DATABASE_NAME')
-CONNECTION_NAME = os.environ.get('CLOUD_SQL_CONNECTION_NAME')
+DEV_USER = os.environ.get('DEV_CLOUD_SQL_USERNAME')
+DEV_PASSWORD = os.environ.get('DEV_CLOUD_SQL_PASSWORD')
+DEV_DATABASE = os.environ.get('DEV_CLOUD_SQL_DATABASE_NAME')
+DEV_CONNECTION_NAME = os.environ.get('DEV_CLOUD_SQL_CONNECTION_NAME')
 
-SQLALCHEMY_DATABASE_URI = (
+PROD_USER = os.environ.get('PROD_CLOUD_SQL_USERNAME')
+PROD_PASSWORD = os.environ.get('PROD_CLOUD_SQL_PASSWORD')
+PROD_DATABASE = os.environ.get('PROD_CLOUD_SQL_DATABASE_NAME')
+PROD_CONNECTION_NAME = os.environ.get('PROD_CLOUD_SQL_CONNECTION_NAME')
+
+
+PROD_SQLALCHEMY_DATABASE_URI = (
     'mysql+pymysql://{user}:{password}@localhost/{database}'
     '?unix_socket=/cloudsql/{connection_name}').format(
-        user=USER, password=PASSWORD,
-        database=DATABASE, connection_name=CONNECTION_NAME)
+        user=PROD_USER, password=PROD_PASSWORD,
+        database=PROD_DATABASE, connection_name=PROD_CONNECTION_NAME)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = SQLALCHEMY_DATABASE_URI
+
+DEV_SQLALCHEMY_DATABASE_URI = (
+    'mysql+pymysql://{user}:{password}@localhost/{database}'
+    '?unix_socket=/cloudsql/{connection_name}').format(
+        user=DEV_USER, password=DEV_PASSWORD,
+        database=DEV_DATABASE, connection_name=DEV_CONNECTION_NAME)
+
+
+if os.environ.get ('GAE_INSTANCE'):
+    print("PRODUCTION")
+    SQLALCHEMY_DATABASE_URI = PROD_SQLALCHEMY_DATABASE_URI
+else:
+    print("DEVELOPMENT")
+    SQLALCHEMY_DATABASE_URI = DEV_SQLALCHEMY_DATABASE_URI
+
+
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(SQLALCHEMY_DATABASE_URI,  "sqlite:///vaccinations.db")
+# app.config['SQLALCHEMY_DATABASE_URI'] = SQLALCHEMY_DATABASE_URI
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = True
 
 db = SQLAlchemy(app)
@@ -35,6 +58,7 @@ class Country(db.Model):
     def to_dict(self):
         # Use Dictionary Comprehension
         return {column.name: getattr(self, column.name) for column in self.__table__.columns}
+
 
 @app.route("/countries", methods=["GET"])
 def get_all_countries():
@@ -62,7 +86,6 @@ def add_country():
         yellow_fever_information=request.args.get("yellow_fever_information"),
         general_information=request.args.get("general_information"),
     )
-
 
     db.session.add(new_country)
     db.session.commit()
