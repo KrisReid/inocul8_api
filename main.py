@@ -60,13 +60,13 @@ def get_by_country():
 def add_country():
     new_country = Country(
         id=str(uuid.uuid4()),
-        name=request.args.get("name"),
-        advised=request.args.get("advised"),
-        consideration=request.args.get("consideration"),
-        selectively_advised=request.args.get("selectively_advised"),
-        yellow_fever_cert_required=request.args.get("yellow_fever_cert_required"),
-        yellow_fever_information=request.args.get("yellow_fever_information"),
-        general_information=request.args.get("general_information"),
+        name=request.form.get("name"),
+        advised=request.form.get("advised"),
+        consideration=request.form.get("consideration"),
+        selectively_advised=request.form.get("selectively_advised"),
+        yellow_fever_cert_required=int(request.form.get("yellow_fever_cert_required")),
+        yellow_fever_information=request.form.get("yellow_fever_information"),
+        general_information=request.form.get("general_information")
     )
 
     db.session.add(new_country)
