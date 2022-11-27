@@ -3,6 +3,10 @@ from flask_sqlalchemy import SQLAlchemy
 import uuid
 import os
 
+import collector
+
+collector.collector()
+
 app = Flask(__name__)
 
 DEV_USER = os.environ.get('DEV_CLOUD_SQL_USERNAME')
@@ -64,7 +68,7 @@ def add_country():
         advised=request.form.get("advised"),
         consideration=request.form.get("consideration"),
         selectively_advised=request.form.get("selectively_advised"),
-        yellow_fever_cert_required=int(request.form.get("yellow_fever_cert_required")),
+        yellow_fever_cert_required=bool(request.form.get("yellow_fever_cert_required")),
         yellow_fever_information=request.form.get("yellow_fever_information"),
         general_information=request.form.get("general_information")
     )
@@ -75,4 +79,3 @@ def add_country():
 
 if __name__ == "__main__":
     app.run()
-
