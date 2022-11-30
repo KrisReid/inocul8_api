@@ -1,11 +1,7 @@
-from flask import Flask, request, make_response, jsonify
+from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 import uuid
 import os
-
-import collector
-
-collector.collector()
 
 app = Flask(__name__)
 
@@ -19,7 +15,6 @@ DEV_SQLALCHEMY_DATABASE_URI = (
     '?unix_socket=/cloudsql/{connection_name}').format(
         user=DEV_USER, password=DEV_PASSWORD,
         database=DEV_DATABASE, connection_name=DEV_CONNECTION_NAME)
-
 
 if os.environ.get ('GAE_INSTANCE'):
     app.config['SQLALCHEMY_DATABASE_URI'] = DEV_SQLALCHEMY_DATABASE_URI
@@ -51,6 +46,7 @@ def get_all_countries():
     all_countries = db.session.query(Country).all()
     return jsonify(countries=[country.to_dict() for country in all_countries])
 
+
 @app.route("/search", methods=["GET"])
 def get_by_country():
     query_country = request.args.get("ctry")
@@ -60,10 +56,11 @@ def get_by_country():
     else:
         return jsonify(error={"Not Found": "Sorry, we don't have a that country."})
 
+
 @app.route("/add", methods=["POST"])
 def add_country():
     new_country = Country(
-        id=str(uuid.uuid4()),
+        id=request.form.get("id"),
         name=request.form.get("name"),
         advised=request.form.get("advised"),
         consideration=request.form.get("consideration"),
