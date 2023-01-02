@@ -1,3 +1,5 @@
+import json
+
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 import uuid
@@ -44,17 +46,25 @@ class Country(db.Model):
 @app.route("/countries", methods=["GET"])
 def get_all_countries():
     all_countries = db.session.query(Country).all()
-    return jsonify(countries=[country.to_dict() for country in all_countries])
+    return jsonify([country.to_dict() for country in all_countries])
+    # return jsonify(countries=[country.to_dict() for country in all_countries])
 
 
 @app.route("/search", methods=["GET"])
 def get_by_country():
-    query_country = request.args.get("ctry")
-    country = db.session.query(Country).filter_by(name=query_country).first()
-    if country:
-        return jsonify(country=country.to_dict())
-    else:
-        return jsonify(error={"Not Found": "Sorry, we don't have a that country."})
+
+    country_array = request.args.get("ctry").split(",")
+    countries = []
+
+    for ctry in country_array:
+        country = db.session.query(Country).filter_by(name=ctry).first()
+        if country:
+            object = jsonify(country.to_dict())
+            countries.append(object.json)
+        else:
+            return jsonify(error={"Not Found": f"Sorry, {ctry} is a country we could not find. Ensure spelling is correct"})
+
+    return jsonify(countries)
 
 
 @app.route("/add", methods=["POST"])
@@ -74,5 +84,124 @@ def add_country():
     db.session.commit()
     return jsonify(response={"success": "Successfully added the new country."})
 
+
+def parse_country_list(text):
+    final_list = []
+    remove_fullstop = text[:-1]
+    list = remove_fullstop.split(";")
+
+    for item in list:
+        k = item.strip()
+        final_list.append(k)
+
+    return final_list
+
+def parse_destination_list(text):
+    final_list = []
+    for vaccination in text.split(","):
+        b = vaccination.split(":")
+        final_list.append(b)
+    return final_list
+
+
+def create_partial_vaccination_object(destination_list, severity_list, travel_date):
+    object = {}
+    # Calculate if the vaccination is covered
+    for destination in destination_list:
+        if destination[0] in severity_list:
+            if destination[1] >= travel_date:
+                object.update({f"{destination[0]}": "valid"})
+            else:
+                object.update({f"{destination[0]}": "invalid"})
+        else:
+            object.update({f"{destination[0]}": "invalid"})
+    return object
+
+
+@app.route("/validate", methods=["GET"])
+def validate_country():
+    # Receive and get the country from the database
+    query_country = request.args.get("country")
+    country = db.session.query(Country).filter_by(name=query_country).first()
+    selected_country = jsonify(country.to_dict())
+    country_json = selected_country.json
+
+    print(country_json)
+
+    # Parse all the lists
+    advised_list = parse_country_list(country_json['advised'])
+    consideration_list = parse_country_list(country_json['consideration'])
+    selectively_advised_list = parse_country_list(country_json['selectively_advised'])
+    # print(selectively_advised_list)
+
+    # do any of my vaccinations exist in any of the above lists?
+    destination_list = parse_destination_list(request.args.get("vaccinations"))
+    # print(destination_list)
+
+    # Receive the travel date
+    travel_date = request.args.get("travel_date")
+
+    # build partial objects for if the vaccine is valid
+    advised_object = create_partial_vaccination_object(destination_list, advised_list, travel_date)
+    consideration_object = create_partial_vaccination_object(destination_list, consideration_list, travel_date)
+    selectively_advised_object = create_partial_vaccination_object(destination_list, selectively_advised_list, travel_date)
+
+    print(advised_object)
+    print(consideration_object)
+    print(selectively_advised_object)
+
+    # advised_object = {}
+    # # Calculate if the vaccination is covered
+    # for destination in destination_list:
+    #     if destination[0] in selectively_advised_list:
+    #         if destination[1] >= travel_date:
+    #             advised_object.update({f"{destination[0]}": "valid"})
+    #         else:
+    #             advised_object.update({f"{destination[0]}": "invalid"})
+    #     else:
+    #         advised_object.update({f"{destination[0]}": "invalid"})
+    # print(advised_object)
+
+
+    # Restructure the response.
+
+
+    if country:
+        return jsonify(country.to_dict())
+    else:
+        return jsonify(error={"Not Found": "Sorry, we don't have that country."})
+
+
+
 if __name__ == "__main__":
     app.run()
+
+
+# // EXAMPLE REQUEST
+# {
+#     "country": "United Kingdom",
+#     "travel_date": "2022-05",
+#     "vaccinations": {
+#         "tetanus": "2023-01",
+#         "Hepititus A" : "2025-10"
+#     }
+# }
+#
+# // EXAMPLE RESPONSE
+# {
+#         "advised": {
+#             "Poliomyelitis" : "Invalid"
+#         },
+#         "consideration": {
+#             "Tetanus": "Valid"
+#         },
+#         "general_information": "Confirm primary courses and boosters are up to date as recommended for life in Britain - including for example, seasonal flu vaccine (if indicated), MMR, vaccines required for occupational risk of exposure, lifestyle risks and underlying medical conditions.",
+#         "id": "669f3f50-9237-4dfa-bc6e-41f849f35083",
+#         "name": "United Kingdom",
+#         "selectively_advised": {
+#             "Hepatitis A": "Valid",
+#             "Hepatitis B": "Invalid"
+#         },
+#         "yellow_fever_cert_required": false,
+#         "yellow_fever_information": "No yellow fever vaccination certificate required for this country."
+#     }
