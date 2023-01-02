@@ -1,5 +1,4 @@
 import json
-
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 import uuid
@@ -107,20 +106,25 @@ def parse_destination_list(text):
 def create_partial_vaccination_object(destination_list, severity_list, travel_date):
     object = {}
     # Calculate if the vaccination is covered
-    for destination in destination_list:
-        if destination[0] in severity_list:
-            if destination[1] >= travel_date:
-                object.update({f"{destination[0]}": "valid"})
+    for vaccination in severity_list:
+        for destination in destination_list:
+            if vaccination in destination[0]:
+                if destination[1] >= travel_date:
+                    object.update({f"{vaccination}": "valid"})
+                else:
+                    # don't update the object if it already has been set to valid
+                    if vaccination not in object.keys():
+                        object.update({f"{vaccination}": "invalid"})
             else:
-                object.update({f"{destination[0]}": "invalid"})
-        else:
-            object.update({f"{destination[0]}": "invalid"})
+                # don't update the object if it already has been set to valid
+                if vaccination not in object.keys():
+                    object.update({f"{vaccination}": "invalid"})
+
     return object
 
 
 @app.route("/validate", methods=["GET"])
 def validate_country():
-    # Receive and get the country from the database
     query_country = request.args.get("country")
     country = db.session.query(Country).filter_by(name=query_country).first()
     selected_country = jsonify(country.to_dict())
@@ -141,36 +145,25 @@ def validate_country():
     # Receive the travel date
     travel_date = request.args.get("travel_date")
 
-    # build partial objects for if the vaccine is valid
     advised_object = create_partial_vaccination_object(destination_list, advised_list, travel_date)
     consideration_object = create_partial_vaccination_object(destination_list, consideration_list, travel_date)
     selectively_advised_object = create_partial_vaccination_object(destination_list, selectively_advised_list, travel_date)
 
+    print("----ADVISED OBJECT ----")
     print(advised_object)
+    print("----CONSIDERATION OBJECT ----")
     print(consideration_object)
+    print("----SELECTIVELY ADVISED OBJECT ----")
     print(selectively_advised_object)
 
-    # advised_object = {}
-    # # Calculate if the vaccination is covered
-    # for destination in destination_list:
-    #     if destination[0] in selectively_advised_list:
-    #         if destination[1] >= travel_date:
-    #             advised_object.update({f"{destination[0]}": "valid"})
-    #         else:
-    #             advised_object.update({f"{destination[0]}": "invalid"})
-    #     else:
-    #         advised_object.update({f"{destination[0]}": "invalid"})
-    # print(advised_object)
 
-
-    # Restructure the response.
+    # Restructure the response and return to the user
 
 
     if country:
         return jsonify(country.to_dict())
     else:
         return jsonify(error={"Not Found": "Sorry, we don't have that country."})
-
 
 
 if __name__ == "__main__":
