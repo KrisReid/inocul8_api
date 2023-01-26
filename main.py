@@ -1,8 +1,7 @@
-import json
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
-import uuid
 import os
+import datetime
 
 app = Flask(__name__)
 
@@ -122,15 +121,23 @@ def create_partial_vaccination_object(destination_list, severity_list, travel_da
 
     return object
 
+def validate_date_format(date):
+    try:
+        if date != datetime.datetime.strptime(date, "%Y-%m").strftime('%Y-%m'):
+            raise ValueError
+        return True
+    except ValueError:
+        return False
+
 
 @app.route("/validate", methods=["GET"])
 def validate_country():
     query_country = request.args.get("country")
     country = db.session.query(Country).filter_by(name=query_country).first()
+    if not country:
+        return jsonify(error={"Not Found": f"Sorry, we can't find {query_country} as a country."})
     selected_country = jsonify(country.to_dict())
     country_json = selected_country.json
-
-    print(country_json)
 
     # Parse all the lists
     advised_list = parse_country_list(country_json['advised'])
@@ -143,58 +150,34 @@ def validate_country():
     # print(destination_list)
 
     # Receive the travel date
-    travel_date = request.args.get("travel_date")
+    travel_date = validate_date_format(request.args.get("travel_date"))
+
+    if not travel_date:
+        return jsonify(error={"Date Error": f"Sorry, {request.args.get('travel_date')} is not an excepted date format. Please use YYYY-MM."})
+    else:
+        travel_date = request.args.get("travel_date")
 
     advised_object = create_partial_vaccination_object(destination_list, advised_list, travel_date)
     consideration_object = create_partial_vaccination_object(destination_list, consideration_list, travel_date)
     selectively_advised_object = create_partial_vaccination_object(destination_list, selectively_advised_list, travel_date)
 
-    print("----ADVISED OBJECT ----")
-    print(advised_object)
-    print("----CONSIDERATION OBJECT ----")
-    print(consideration_object)
-    print("----SELECTIVELY ADVISED OBJECT ----")
-    print(selectively_advised_object)
-
-
     # Restructure the response and return to the user
+    response = {
+        "advised" : advised_object,
+        "consideration" : consideration_object,
+        "general_information" : country_json["general_information"],
+        "id": country_json["id"],
+        "name": country_json["name"],
+        "selectively_advised": selectively_advised_object,
+        "yellow_fever_cert_required": country_json["yellow_fever_cert_required"],
+        "yellow_fever_information": country_json["yellow_fever_information"]
+    }
 
-
-    if country:
-        return jsonify(country.to_dict())
+    if response:
+        return jsonify([response])
     else:
-        return jsonify(error={"Not Found": "Sorry, we don't have that country."})
+        return jsonify(error={"Error": "Sorry, we have experienced an issue."})
 
 
 if __name__ == "__main__":
     app.run()
-
-
-# // EXAMPLE REQUEST
-# {
-#     "country": "United Kingdom",
-#     "travel_date": "2022-05",
-#     "vaccinations": {
-#         "tetanus": "2023-01",
-#         "Hepititus A" : "2025-10"
-#     }
-# }
-#
-# // EXAMPLE RESPONSE
-# {
-#         "advised": {
-#             "Poliomyelitis" : "Invalid"
-#         },
-#         "consideration": {
-#             "Tetanus": "Valid"
-#         },
-#         "general_information": "Confirm primary courses and boosters are up to date as recommended for life in Britain - including for example, seasonal flu vaccine (if indicated), MMR, vaccines required for occupational risk of exposure, lifestyle risks and underlying medical conditions.",
-#         "id": "669f3f50-9237-4dfa-bc6e-41f849f35083",
-#         "name": "United Kingdom",
-#         "selectively_advised": {
-#             "Hepatitis A": "Valid",
-#             "Hepatitis B": "Invalid"
-#         },
-#         "yellow_fever_cert_required": false,
-#         "yellow_fever_information": "No yellow fever vaccination certificate required for this country."
-#     }
