@@ -5,18 +5,20 @@ import datetime
 
 app = Flask(__name__)
 
-DEV_USER = os.environ.get('DEV_CLOUD_SQL_USERNAME')
-DEV_PASSWORD = os.environ.get('DEV_CLOUD_SQL_PASSWORD')
-DEV_DATABASE = os.environ.get('DEV_CLOUD_SQL_DATABASE_NAME')
-DEV_CONNECTION_NAME = os.environ.get('DEV_CLOUD_SQL_CONNECTION_NAME')
+USER = os.environ.get('USERNAME')
+PASSWORD = os.environ.get('PASSWORD')
+DATABASE_NAME = os.environ.get('DATABASE_NAME')
+HOST = os.environ.get('HOST')
 
-DEV_SQLALCHEMY_DATABASE_URI = (
-    'mysql+pymysql://{user}:{password}@localhost/{database}'
-    '?unix_socket=/cloudsql/{connection_name}').format(
-        user=DEV_USER, password=DEV_PASSWORD,
-        database=DEV_DATABASE, connection_name=DEV_CONNECTION_NAME)
+DEV_SQLALCHEMY_DATABASE_URI = f'mysql+pymysql://{USER}:{PASSWORD}@{HOST}:3306/{DATABASE_NAME}'
 
-if os.environ.get ('GAE_INSTANCE'):
+# DEV_SQLALCHEMY_DATABASE_URI = (
+#     'mysql+pymysql://{user}:{password}@localhost/{database}'
+#     '?unix_socket=/cloudsql/{connection_name}').format(
+#         user=DEV_USER, password=DEV_PASSWORD,
+#         database=DEV_DATABASE, connection_name=DEV_CONNECTION_NAME)
+
+if os.environ.get("FLASK_ENV") == "production":
     app.config['SQLALCHEMY_DATABASE_URI'] = DEV_SQLALCHEMY_DATABASE_URI
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = True
 else:
