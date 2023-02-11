@@ -10,25 +10,28 @@ PASSWORD = os.environ.get('PASSWORD')
 DATABASE_NAME = os.environ.get('DATABASE_NAME')
 HOST = os.environ.get('HOST')
 
-DEV_SQLALCHEMY_DATABASE_URI = f'mysql+pymysql://{USER}:{PASSWORD}@{HOST}:3306/{DATABASE_NAME}'
-
-# DEV_SQLALCHEMY_DATABASE_URI = (
-#     'mysql+pymysql://{user}:{password}@localhost/{database}'
-#     '?unix_socket=/cloudsql/{connection_name}').format(
-#         user=DEV_USER, password=DEV_PASSWORD,
-#         database=DEV_DATABASE, connection_name=DEV_CONNECTION_NAME)
+DEV_SQLALCHEMY_DATABASE_URI = ('mysql+pymysql://{user}:{password}@{host}:3306/{database}').format(
+    user=USER,
+    password=PASSWORD,
+    host=HOST,
+    database=DATABASE_NAME
+)
 
 if os.environ.get("FLASK_ENV") == "production":
+    print("PRODUCTION")
     app.config['SQLALCHEMY_DATABASE_URI'] = DEV_SQLALCHEMY_DATABASE_URI
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = True
 else:
+    print("LOCAL")
     app.config['SQLALCHEMY_DATABASE_URI'] = "sqlite:///vaccinations.db"
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    # app.config['SQLALCHEMY_DATABASE_URI'] = DEV_SQLALCHEMY_DATABASE_URI
+    # app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = True
 
 db = SQLAlchemy(app)
 
 # User ORM for SQLAlchemy
-class Country(db.Model):
+class Countries(db.Model):
     id = db.Column(db.String(500), primary_key=True)
     name = db.Column(db.String(250), nullable=False)
     advised = db.Column(db.String(250), nullable=False)
@@ -45,9 +48,8 @@ class Country(db.Model):
 
 @app.route("/countries", methods=["GET"])
 def get_all_countries():
-    all_countries = db.session.query(Country).all()
+    all_countries = db.session.query(Countries).all()
     return jsonify([country.to_dict() for country in all_countries])
-    # return jsonify(countries=[country.to_dict() for country in all_countries])
 
 
 @app.route("/search", methods=["GET"])
@@ -57,7 +59,7 @@ def get_by_country():
     countries = []
 
     for ctry in country_array:
-        country = db.session.query(Country).filter_by(name=ctry).first()
+        country = db.session.query(Countries).filter_by(name=ctry).first()
         if country:
             object = jsonify(country.to_dict())
             countries.append(object.json)
@@ -69,7 +71,7 @@ def get_by_country():
 
 @app.route("/add", methods=["POST"])
 def add_country():
-    new_country = Country(
+    new_country = Countries(
         id=request.form.get("id"),
         name=request.form.get("name"),
         advised=request.form.get("advised"),
@@ -135,7 +137,7 @@ def validate_date_format(date):
 @app.route("/validate", methods=["GET"])
 def validate_country():
     query_country = request.args.get("country")
-    country = db.session.query(Country).filter_by(name=query_country).first()
+    country = db.session.query(Countries).filter_by(name=query_country).first()
     if not country:
         return jsonify(error={"Not Found": f"Sorry, we can't find {query_country} as a country."})
     selected_country = jsonify(country.to_dict())
