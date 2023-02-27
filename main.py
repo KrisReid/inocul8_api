@@ -2,31 +2,64 @@ from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 import os
 import datetime
+import boto3
+import json
 
 app = Flask(__name__)
 
-USER = os.environ.get('USERNAME')
-PASSWORD = os.environ.get('PASSWORD')
-DATABASE_NAME = os.environ.get('DATABASE_NAME')
-HOST = os.environ.get('HOST')
+AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
+AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
 
-DEV_SQLALCHEMY_DATABASE_URI = ('mysql+pymysql://{user}:{password}@{host}:3306/{database}').format(
-    user=USER,
-    password=PASSWORD,
-    host=HOST,
-    database=DATABASE_NAME
+secret_name = "inocul8-dev-database"
+region_name = "eu-west-2"
+
+# Create a Secrets Manager client
+session = boto3.session.Session(
+    aws_access_key_id=AWS_ACCESS_KEY_ID,
+    aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+    region_name=region_name,
+)
+client = session.client(
+    service_name='secretsmanager'
 )
 
-if os.environ.get("FLASK_ENV") == "production":
-    print("PRODUCTION")
+# Get the secret value
+response = client.get_secret_value(
+    SecretId=secret_name
+)
+
+# Get the secret data
+if 'SecretString' in response:
+    secret_data = json.loads(response['SecretString'])
+else:
+    secret_data = json.loads(response['SecretBinary'].decode('utf-8'))
+
+
+DEV_SQLALCHEMY_DATABASE_URI = ('mysql+pymysql://{user}:{password}@{host}:3306/{database}').format(
+    user=secret_data['username'],
+    password=secret_data['password'],
+    host=secret_data['host'],
+    database=secret_data['dbname']
+)
+
+LOCAL_SQLALCHEMY_DATABASE_URI = ('mysql+pymysql://{user}:{password}@{host}:3306/{database}').format(
+    user=os.environ.get('LOCAL_USER'),
+    password=os.environ.get('LOCAL_PASSWORD'),
+    host=os.environ.get('LOCAL_HOST'),
+    database=os.environ.get('LOCAL_DATABASE')
+)
+
+
+if os.environ.get("FLASK_ENV") == "development":
+    print("AWS DEVELOPMENT")
     app.config['SQLALCHEMY_DATABASE_URI'] = DEV_SQLALCHEMY_DATABASE_URI
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = True
 else:
     print("LOCAL")
-    app.config['SQLALCHEMY_DATABASE_URI'] = "sqlite:///vaccinations.db"
+    app.config['SQLALCHEMY_DATABASE_URI'] = LOCAL_SQLALCHEMY_DATABASE_URI
+    # app.config['SQLALCHEMY_DATABASE_URI'] = "sqlite:///vaccinations.db"
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-    # app.config['SQLALCHEMY_DATABASE_URI'] = DEV_SQLALCHEMY_DATABASE_URI
-    # app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = True
+
 
 db = SQLAlchemy(app)
 
@@ -184,4 +217,6 @@ def validate_country():
 
 
 if __name__ == "__main__":
-    app.run()
+    # app.run()
+    app.run(host='0.0.0.0')
+
