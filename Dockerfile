@@ -5,17 +5,15 @@ FROM python:3.9-slim-buster
 WORKDIR /api
 
 # Copy the requirements file to the container
-# COPY main.py ./
-# COPY requirements.txt ./
-COPY . .
+COPY main.py ./
+COPY requirements.txt ./
+# COPY . .
 
 # Install required Python packages
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Set environment variables
 ENV FLASK_APP=main.py
-ENV FLASK_ENV=local
-# ENV FLASK_ENV=development
 
 # Expose port 5000 for Flask to listen on
 EXPOSE 3306
