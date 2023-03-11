@@ -26,7 +26,8 @@ else:
         database=os.environ.get('LOCAL_DATABASE')
     )
     app.config['SQLALCHEMY_DATABASE_URI'] = LOCAL_SQLALCHEMY_DATABASE_URI
-    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = True
+    print(LOCAL_SQLALCHEMY_DATABASE_URI)
 
 for k,v in os.environ.items():
     print(k,v)
