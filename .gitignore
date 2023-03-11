@@ -12,6 +12,9 @@ __pycache__/
 
 # Custom
 *.yaml
+/config/
+.env_dev
+.env_local
 
 
 # Distribution / packaging
@@ -129,8 +132,6 @@ celerybeat.pid
 
 # Environments
 .env
-.env_dev
-.env_local
 .venv
 env/
 venv/
