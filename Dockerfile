@@ -10,11 +10,8 @@ COPY . .
 # Install required Python packages
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Set environment variables in the /config files
-
 # Expose port 5000 for Flask to listen on
 EXPOSE 3306
-
 
 # Run the Flask application
 CMD ["flask", "run", "--host=0.0.0.0"]

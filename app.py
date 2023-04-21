@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 from flask_sqlalchemy import SQLAlchemy
 import os
 import datetime
@@ -49,6 +49,11 @@ class Countries(db.Model):
         # Use Dictionary Comprehension
         return {column.name: getattr(self, column.name) for column in self.__table__.columns}
 
+
+@app.route('/')
+def home():
+    # Every render_template has a logged_in variable set.
+    return render_template("index.html")
 
 @app.route("/countries", methods=["GET"])
 def get_all_countries():
