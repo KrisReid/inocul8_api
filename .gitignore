@@ -18,7 +18,6 @@ __pycache__/
 /.aws/
 task-definition.json
 
-
 # Distribution / packaging
 .Python
 build/
