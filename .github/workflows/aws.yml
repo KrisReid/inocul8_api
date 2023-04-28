@@ -24,7 +24,7 @@ env:
   ECR_REPOSITORY: inocul8
   ECS_SERVICE: inocul8-dev
   ECS_CLUSTER: inocul8-dev-cluster
-#  ECS_TASK_DEFINITION: .aws/task-definition.jsons
+#  ECS_TASK_DEFINITION: .awssss/task-definition.jsons
   CONTAINER_NAME: api
 
 permissions:
